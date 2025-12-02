@@ -60,17 +60,16 @@ $CODE
 
 ```bash
 # 首次执行
-codex exec --json "analyze auth" > auth.jsonl
+codex exec "analyze src/auth for issues"
 
-# 提取会话 ID
-SID=$(grep -o '"thread_id":"[^"]*"' auth.jsonl | head -1 | cut -d'"' -f4)
+# 复用会话继续 (用 stdin 传递 prompt，避免 CLI bug)
+echo "fix the issues you found" | codex exec resume --last
 
-# 复用会话继续 (继承全部上下文)
-codex exec resume $SID --full-auto "fix the issues you found"
-
-# 或使用 --last 复用最近会话
-codex exec resume --last "continue..."
+# 或使用 --full-auto 允许修改
+echo "fix the issues" | codex exec resume --last --full-auto
 ```
+
+> **注意**：`codex exec resume --last "prompt"` 有 CLI 解析 bug，必须用 stdin 传递 prompt。
 
 **何时复用**：
 - 分析后修复 → 复用 (知道发现了什么)
@@ -169,10 +168,10 @@ codex exec resume $AUTH_SID "verify fixes and run tests"
 # Round 1: 分析
 codex exec "analyze codebase, plan auth implementation"
 
-# Round 2-4: 复用同一会话，继承全部上下文
-codex exec resume --last --full-auto "implement as planned"
-codex exec resume --last --full-auto "add tests"
-codex exec resume --last --full-auto "fix failures"
+# Round 2-4: 复用同一会话，继承全部上下文 (用 stdin)
+echo "implement as planned" | codex exec resume --last --full-auto
+echo "add tests" | codex exec resume --last --full-auto
+echo "fix failures" | codex exec resume --last --full-auto
 ```
 
 ### 示例 3: 代码审查 (4 路并行 → 各自复用修复)
@@ -204,12 +203,12 @@ wait
 ### 命令
 
 ```bash
-codex exec "prompt"                    # 只读
-codex exec --full-auto "prompt"        # 可写
-codex exec --cd /path "prompt"         # 指定目录
-codex exec --json "prompt"             # JSON 输出
-codex exec resume --last "prompt"      # 复用最近会话
-codex exec resume $SID "prompt"        # 复用指定会话
+codex exec "prompt"                              # 只读
+codex exec --full-auto "prompt"                  # 可写
+codex exec --cd /path "prompt"                   # 指定目录
+codex exec --json "prompt"                       # JSON 输出
+echo "prompt" | codex exec resume --last         # 复用最近会话
+echo "prompt" | codex exec resume --last --full-auto  # 复用 + 可写
 ```
 
 ### 后台并行
